@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { 
   Utensils, Car, Home, Gamepad2, Layers, 
-  PlusCircle, MinusCircle, Calendar, Edit2, Check
+  PlusCircle, MinusCircle, Calendar, Edit2, Check, Trash2, X
 } from "lucide-react";
 
 const COLORS = ["#60a5fa", "#fbbf24", "#a78bfa", "#f472b6"];
@@ -32,7 +32,7 @@ export default function WorkTravelApp() {
   const [filter, setFilter] = useState("Todo");
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false); // ESTADO PARA EL MODAL
 
   useEffect(() => {
     const data = localStorage.getItem("wt-data");
@@ -52,7 +52,7 @@ export default function WorkTravelApp() {
     if (isNaN(num)) return;
     const now = new Date();
     const newMovement = {
-      id: Date.now(), // ID único para editar
+      id: Date.now(),
       type,
       value: num,
       category: type === "Gasto" ? cat : "Ingreso",
@@ -63,27 +63,26 @@ export default function WorkTravelApp() {
     setHistory(prev => [newMovement, ...prev]);
   };
 
-  const startEdit = (item) => {
-    setEditingId(item.id);
-    setEditValue(item.value.toString());
-  };
-
   const saveEdit = (id) => {
     const newValue = parseFloat(editValue);
     if (isNaN(newValue)) return;
-
     const newHistory = history.map(item => {
       if (item.id === id) {
-        // Ajustamos el balance global restando el viejo y sumando el nuevo
         const diff = item.type === "Ingreso" ? (newValue - item.value) : (item.value - newValue);
         setBalance(prev => prev + diff);
         return { ...item, value: newValue };
       }
       return item;
     });
-
     setHistory(newHistory);
     setEditingId(null);
+  };
+
+  const resetSystem = () => {
+    setBalance(0);
+    setHistory([]);
+    localStorage.clear();
+    setShowConfirm(false);
   };
 
   const filteredHistory = history.filter(item => {
@@ -106,21 +105,7 @@ export default function WorkTravelApp() {
   const comparisonData = () => {
     let inc = 0, exp = 0;
     filteredHistory.forEach(i => i.type === "Ingreso" ? inc += i.value : exp += i.value);
-    return [
-      { name: "Ingresos", value: inc, color: "#10b981" },
-      { name: "Gastos", value: exp, color: "#ef4444" }
-    ];
-  };
-
-  const renderLabel = ({ cx, cy, midAngle, outerRadius, value, name, fill }) => {
-    const RADIAN = Math.PI / 180;
-    const x = cx + (outerRadius * 1.3) * Math.cos(-midAngle * RADIAN);
-    const y = cy + (outerRadius * 1.3) * Math.sin(-midAngle * RADIAN);
-    return (
-      <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-[10px] font-bold">
-        {`${name}: $${value.toFixed(2)}`}
-      </text>
-    );
+    return [{ name: "Ingresos", value: inc, color: "#10b981" }, { name: "Gastos", value: exp, color: "#ef4444" }];
   };
 
   return (
@@ -137,9 +122,7 @@ export default function WorkTravelApp() {
         {/* FILTROS */}
         <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-slate-700/50">
           {["Todo", "Semana", "Mes"].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-xl ${filter === f ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500'}`}>
-              {f}
-            </button>
+            <button key={f} onClick={() => setFilter(f)} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-xl ${filter === f ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>{f}</button>
           ))}
         </div>
 
@@ -149,7 +132,6 @@ export default function WorkTravelApp() {
             <input type="number" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="Nuevo Ingreso" className="w-full bg-transparent outline-none text-lg" />
             <button onClick={() => { addMovement("Ingreso", income); setIncome(""); }} className="text-emerald-500"><PlusCircle size={28}/></button>
           </div>
-
           <div className="bg-slate-800/40 p-5 rounded-[2rem] border border-slate-700/50 space-y-3">
             <input type="number" value={expense} onChange={(e) => setExpense(e.target.value)} placeholder="Nuevo Gasto" className="w-full bg-transparent outline-none text-lg" />
             <div className="flex gap-2">
@@ -161,28 +143,27 @@ export default function WorkTravelApp() {
           </div>
         </div>
 
-        {/* GRÁFICA 1: CATEGORÍAS */}
+        {/* GRÁFICAS */}
         {categoryData().length > 0 && (
           <section className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
             <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-4">Gastos por Categoría</h3>
-            <div className="h-60"><ResponsiveContainer><PieChart><Pie data={categoryData()} dataKey="value" innerRadius={40} outerRadius={55} labelLine={false} label={renderLabel}>{categoryData().map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none"/>)}</Pie></PieChart></ResponsiveContainer></div>
+            <div className="h-60"><ResponsiveContainer><PieChart><Pie data={categoryData()} dataKey="value" innerRadius={40} outerRadius={55} labelLine={false} label={({name, value, fill}) => <text fill={fill} fontSize="10" fontWeight="bold">{`${name}: $${value.toFixed(2)}`}</text>}>{categoryData().map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none"/>)}</Pie></PieChart></ResponsiveContainer></div>
           </section>
         )}
 
-        {/* GRÁFICA 2: COMPARATIVA (RECUPERADA) */}
         {filteredHistory.length > 0 && (
           <section className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
             <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-4">Ingresos vs Gastos ({filter})</h3>
-            <div className="h-60"><ResponsiveContainer><PieChart><Pie data={comparisonData()} dataKey="value" innerRadius={40} outerRadius={55} labelLine={false} label={renderLabel}>{comparisonData().map((entry, i) => <Cell key={i} fill={entry.color} stroke="none"/>)}</Pie></PieChart></ResponsiveContainer></div>
+            <div className="h-60"><ResponsiveContainer><PieChart><Pie data={comparisonData()} dataKey="value" innerRadius={40} outerRadius={55} labelLine={false} label={({name, value, fill}) => <text fill={fill} fontSize="10" fontWeight="bold">{`${name}: $${value.toFixed(2)}`}</text>}>{comparisonData().map((entry, i) => <Cell key={i} fill={entry.color} stroke="none"/>)}</Pie></PieChart></ResponsiveContainer></div>
           </section>
         )}
 
-        {/* HISTORIAL CON EDICIÓN */}
-        <section className="pb-20 space-y-3">
+        {/* HISTORIAL */}
+        <section className="space-y-3">
           <h3 className="text-slate-600 text-[10px] uppercase font-bold px-3 tracking-widest">Historial</h3>
           {filteredHistory.slice(0, 15).map((item) => (
             <div key={item.id} className="bg-slate-800/20 p-4 rounded-[1.5rem] flex justify-between items-center border border-slate-800/50">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 text-left">
                 <div className="bg-slate-900/50 p-3 rounded-xl">{getCategoryIcon(item.category, item.type)}</div>
                 <div className="flex flex-col">
                   <span className="text-sm font-bold">{item.category}</span>
@@ -191,23 +172,58 @@ export default function WorkTravelApp() {
               </div>
               <div className="flex items-center gap-3">
                 {editingId === item.id ? (
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="w-20 bg-slate-900 border border-slate-700 rounded-lg p-1 text-sm outline-none text-right" />
-                    <button onClick={() => saveEdit(item.id)} className="text-emerald-400"><Check size={18}/></button>
+                  <div className="flex items-center gap-1">
+                    <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="w-16 bg-slate-900 text-[12px] p-1 rounded text-right outline-none border border-slate-700" />
+                    <button onClick={() => saveEdit(item.id)} className="text-emerald-400"><Check size={16}/></button>
                   </div>
                 ) : (
                   <>
-                    <span className={`font-mono font-bold ${item.type === 'Ingreso' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      ${formatMoney(item.value)}
-                    </span>
-                    <button onClick={() => startEdit(item)} className="text-slate-600 hover:text-slate-400 ml-1"><Edit2 size={14}/></button>
+                    <span className={`font-mono font-bold ${item.type === 'Ingreso' ? 'text-emerald-400' : 'text-red-400'}`}>${formatMoney(item.value)}</span>
+                    <button onClick={() => { setEditingId(item.id); setEditValue(item.value.toString()); }} className="text-slate-600"><Edit2 size={12}/></button>
                   </>
                 )}
               </div>
             </div>
           ))}
         </section>
+
+        {/* BOTÓN DE RESET INTEGRADO */}
+        <div className="pt-10 pb-20">
+          <button 
+            onClick={() => setShowConfirm(true)} 
+            className="w-full py-4 rounded-2xl border border-slate-800 text-slate-700 text-[10px] font-black uppercase tracking-[0.3em] hover:text-red-500 transition-colors"
+          >
+            Formatear Datos ⚙️
+          </button>
+        </div>
       </div>
+
+      {/* MODAL DE CONFIRMACIÓN (Vuelve a estar activo) */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 z-[100]">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] text-center max-w-xs w-full shadow-2xl">
+            <div className="bg-red-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20 text-red-500">
+              <Trash2 size={30} />
+            </div>
+            <h4 className="text-white font-bold mb-2 uppercase text-xs tracking-widest">¿Confirmar Reset?</h4>
+            <p className="text-slate-500 text-[10px] leading-relaxed mb-8">Esta acción borrará permanentemente todo tu historial y balance actual. No se puede deshacer.</p>
+            <div className="space-y-3">
+              <button 
+                onClick={resetSystem} 
+                className="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-red-500/20"
+              >
+                Sí, Borrar Todo
+              </button>
+              <button 
+                onClick={() => setShowConfirm(false)} 
+                className="w-full py-2 text-slate-500 text-[10px] font-bold uppercase"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
