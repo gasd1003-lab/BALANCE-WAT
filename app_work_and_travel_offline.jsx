@@ -98,16 +98,13 @@ export default function WorkTravelApp() {
   const comparisonData = () => {
     let inc = 0, exp = 0;
     filteredHistory.forEach(i => i.type === "Ingreso" ? inc += i.value : exp += i.value);
-    return [
-      { name: "Ingresos", value: inc, color: "#10b981" },
-      { name: "Gastos", value: exp, color: "#ef4444" }
-    ];
+    return [{ name: "Ingresos", value: inc, color: "#10b981" }, { name: "Gastos", value: exp, color: "#ef4444" }];
   };
 
-  // Función de etiquetas mejorada para evitar colisiones y cortes
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value, name, fill }) => {
+  // ESTA FUNCIÓN ES LA QUE ASEGURA QUE SE VEAN LAS ETIQUETAS
+  const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, value, name, fill }) => {
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius * 1.35; // Mayor radio para que no choquen con el círculo
+    const radius = outerRadius * 1.3; 
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -118,7 +115,7 @@ export default function WorkTravelApp() {
         fill={fill} 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central" 
-        style={{ fontSize: '10px', fontWeight: 'bold', fontFamily: 'sans-serif' }}
+        style={{ fontSize: '11px', fontWeight: 'bold' }}
       >
         {`${name}: $${value.toFixed(2)}`}
       </text>
@@ -136,14 +133,12 @@ export default function WorkTravelApp() {
           </div>
         </header>
 
-        {/* FILTROS */}
         <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-slate-700/50">
           {["Todo", "Semana", "Mes"].map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-xl ${filter === f ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500'}`}>{f}</button>
           ))}
         </div>
 
-        {/* INPUTS */}
         <div className="grid gap-3">
           <div className="bg-slate-800/40 p-5 rounded-[2rem] border border-slate-700/50 flex gap-2">
             <input type="number" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="Nuevo Ingreso" className="w-full bg-transparent outline-none text-lg" />
@@ -160,55 +155,57 @@ export default function WorkTravelApp() {
           </div>
         </div>
 
-        {/* GRÁFICAS CORREGIDAS */}
-        <div className="space-y-6 pt-4">
+        {/* SECCIÓN DE GRÁFICAS */}
+        <div className="space-y-4 pt-4">
           {categoryData().length > 0 && (
-            <section className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
-              <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-8">Gastos por Categoría</h3>
+            <div className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
+              <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-6">Gastos por Categoría</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart overflow="visible">
+                  <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
                     <Pie 
                       data={categoryData()} 
                       dataKey="value" 
-                      innerRadius={35} 
+                      innerRadius={30} 
                       outerRadius={50} 
                       labelLine={false} 
                       label={renderCustomLabel}
+                      isAnimationActive={false} // Desactivamos animación para evitar fallos de renderizado
                     >
                       {categoryData().map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none"/>)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </section>
+            </div>
           )}
 
           {filteredHistory.length > 0 && (
-            <section className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
-              <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-8">Ingresos vs Gastos ({filter})</h3>
+            <div className="bg-slate-800/20 p-6 rounded-[2.5rem] border border-slate-800/50 text-center">
+              <h3 className="text-[10px] uppercase font-bold text-slate-500 mb-6">Ingresos vs Gastos ({filter})</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart overflow="visible">
+                  <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
                     <Pie 
                       data={comparisonData()} 
                       dataKey="value" 
-                      innerRadius={35} 
+                      innerRadius={30} 
                       outerRadius={50} 
                       labelLine={false} 
                       label={renderCustomLabel}
+                      isAnimationActive={false}
                     >
                       {comparisonData().map((entry, i) => <Cell key={i} fill={entry.color} stroke="none"/>)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </section>
+            </div>
           )}
         </div>
 
         {/* HISTORIAL */}
-        <section className="space-y-3 pt-6 pb-12">
+        <section className="space-y-3 pt-6 pb-20">
           <h3 className="text-slate-600 text-[10px] uppercase font-bold px-3 tracking-widest">Historial</h3>
           {filteredHistory.slice(0, 15).map((item) => (
             <div key={item.id} className="bg-slate-800/20 p-4 rounded-[1.5rem] flex justify-between items-center border border-slate-800/50">
@@ -242,7 +239,6 @@ export default function WorkTravelApp() {
         </div>
       </div>
 
-      {/* MODAL RESET */}
       {showConfirm && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8 z-[100]">
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] text-center max-w-xs w-full shadow-2xl">
